@@ -6,8 +6,13 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		06DA46952D8B261700A17DF3 /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 06DA46942D8B261700A17DF3 /* AVFoundation.framework */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		0631F1E42D80943800A7F3D4 /* Memorama.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Memorama.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		06DA46942D8B261700A17DF3 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -36,6 +41,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				06DA46952D8B261700A17DF3 /* AVFoundation.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -46,6 +52,7 @@
 			isa = PBXGroup;
 			children = (
 				0631F1E62D80943800A7F3D4 /* Memorama */,
+				06DA46932D8B261700A17DF3 /* Frameworks */,
 				0631F1E52D80943800A7F3D4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -56,6 +63,14 @@
 				0631F1E42D80943800A7F3D4 /* Memorama.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		06DA46932D8B261700A17DF3 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				06DA46942D8B261700A17DF3 /* AVFoundation.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
