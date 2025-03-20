@@ -9,7 +9,8 @@ import UIKit
 import AVFoundation
 
 class JuegoViewController: UIViewController {
-
+    
+    @IBOutlet weak var scoreLabel: UILabel!
     // Referencia a la etiqueta para mostrar el tiempo transcurrido.
     @IBOutlet weak var timeLabel: UILabel!
     // Conexión de los botones de las cartas desde el Storyboard
@@ -31,6 +32,12 @@ class JuegoViewController: UIViewController {
     
     // Estado inicial de las cartas (volteadas)
     var isFlipped = false
+    
+    let baseScore = 10000
+    let penaltyforError = 50
+    let penaltyforTime = 10
+    var finalScore: Int!
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -64,7 +71,8 @@ class JuegoViewController: UIViewController {
         }
         // Inicializa el contador del tiempo.
         timeLabel.text = "Tiempo: 0s"
-        playSound(named: "song-mario-bros")
+        playSound(named: "song-mario-bros", loop: true)
+        scoreLabel.text = "Puntos: \(baseScore)"
     }
     
     // Voltear carta hacia abajo
@@ -121,6 +129,7 @@ class JuegoViewController: UIViewController {
         } else {
             // Emparejamiento incorrecto
             errors += 1 // Incrementa contador de errores
+            updateScore()
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                 self.flipCardDown(button: card1)
                 self.flipCardDown(button: card2)
@@ -132,31 +141,91 @@ class JuegoViewController: UIViewController {
     func endGame() {
         timer?.invalidate() // Detiene el temporizador
         playSound(named: "win") // Sonido de victoria
+        
+        finalScore = baseScore - (errors * penaltyforError) - (timeElapsed / penaltyforTime)
+        if finalScore < 0 {
+            finalScore = 0
+        }
+        
         showAlert(title: "¡Juego Terminado!",
-                message: "Tiempo: \(timeElapsed)s\nErrores: \(errors)")
+                  message: "Tiempo: \(timeElapsed)s\nErrores: \(errors)\nPuntaje: \(String(finalScore))")
     }
     
     // Alertas
     func showAlert(title: String, message: String) {
         let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        alert.addTextField { textField in textField.placeholder = "Enter your name" }
+        let saveAction = UIAlertAction(title: "Save", style: .default) {
+            _ in let name = alert.textFields?.first?.text?.trimmingCharacters(in: .whitespaces) ?? "Anonymous"
+            
+            self.saveScore(self.finalScore, name: name)
+        }
+        let cancelAction = UIAlertAction(title: "Cancel", style: .destructive)
+        
+        alert.addAction(saveAction)
+        alert.addAction(cancelAction)
+        
+        present(alert, animated: true)
+    }
+    
+    func saveScore(_ score: Int, name: String) {
+        var records = UserDefaults.standard.array(forKey: "records") as? [[String: Any]] ?? []
+        
+        // Crear nuevo record
+        let newRecord = [
+            "name": name,
+            "score": score,
+            "time": timeElapsed,
+            "errors": errors,
+            "date": Date()
+        ] as [String : Any]
+        
+        // Agregar y ordenar records
+        records.append(newRecord)
+        records.sort { ($0["score"] as? Int ?? 0) > ($1["score"] as? Int ?? 0) }
+        
+        // Mantener solo los 5 mejores
+        if records.count > 5 {
+            records = Array(records[0..<5])
+        }
+        
+        UserDefaults.standard.set(records, forKey: "records")
+    }
+    func askForNameAndSaveScore(_ score: Int) {
+        let alert = UIAlertController(title: "Nuevo Record", message: "Ingresa tu nombre:", preferredStyle: .alert)
+        alert.addTextField { textField in
+            textField.placeholder = "Tu nombre"
+        }
+        alert.addAction(UIAlertAction(title: "Guardar", style: .default) { _ in
+            if let name = alert.textFields?.first?.text, !name.isEmpty {
+                self.saveScore(score, name: name)
+            }
+        })
         present(alert, animated: true)
     }
     // Actualizar el tiempo.
     @objc func updateTimer() {
         timeElapsed += 1 // Incrementa el tiempo
         timeLabel.text = "Tiempo: \(timeElapsed)s" // Actualiza la UI
+        updateScore()
     }
     // Sonidos
-    func playSound(named soundName: String) {
+    func playSound(named soundName: String, loop: Bool = false) {
         guard let path = Bundle.main.path(forResource: soundName, ofType: "mp3") else { return }
         let url = URL(fileURLWithPath: path)
         
         do {
             audioPlayer = try AVAudioPlayer(contentsOf: url)
+            audioPlayer?.numberOfLoops = loop ? -1 : 0 // -1 para bucle, 0 para una sola vez.
             audioPlayer?.play()
         } catch {
             print("Error al reproducir sonido")
         }
+    }
+    
+    func updateScore(){
+        let currentScore = baseScore - (errors * penaltyforError) - (timeElapsed * penaltyforTime)
+        let displayedScore = max(currentScore, 0)
+        self.scoreLabel.text = "Puntos: \(displayedScore)"
     }
 }
