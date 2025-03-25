@@ -142,7 +142,9 @@ class JuegoViewController: UIViewController {
         timer?.invalidate() // Detiene el temporizador
         playSound(named: "win") // Sonido de victoria
         
-        finalScore = baseScore - (errors * penaltyforError) - (timeElapsed / penaltyforTime)
+        // Calcular el puntaje final
+        finalScore = baseScore - (errors * penaltyforError) - (timeElapsed * penaltyforTime)
+        // Validar que el puntaje no llegue a un valor negativo.
         if finalScore < 0 {
             finalScore = 0
         }
@@ -162,9 +164,9 @@ class JuegoViewController: UIViewController {
         }
         let cancelAction = UIAlertAction(title: "Cancel", style: .destructive)
         
-        alert.addAction(saveAction)
         alert.addAction(cancelAction)
-        
+        alert.addAction(saveAction)
+       
         present(alert, animated: true)
     }
     
