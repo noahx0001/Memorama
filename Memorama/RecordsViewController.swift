@@ -51,10 +51,29 @@ class RecordsViewController: UIViewController, UITableViewDataSource {
     }
     
     func loadRecords() {
-        let recordsData = UserDefaults.standard.array(forKey: "records") as? [[String: Any]] ?? []
-        print(recordsData)
+        var recordsData = UserDefaults.standard.array(forKey: "records") as? [[String: Any]] ?? []
+            
+        // Si no hay registros reales, creamos 5 falsos
+        if recordsData.isEmpty {
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "dd/MM/yyyy HH:mm:ss"
+            let currentDate = Date()
+            
+            // Creamos 5 registros de ejemplo
+            let fakeRecords: [[String: Any]] = [
+                ["name": "Jugador 1", "score": 100, "time": 45, "errors": 2, "date": currentDate],
+                ["name": "Jugador 2", "score": 90, "time": 50, "errors": 3, "date": currentDate],
+                ["name": "Jugador 3", "score": 80, "time": 55, "errors": 4, "date": currentDate],
+                ["name": "Jugador 4", "score": 70, "time": 60, "errors": 5, "date": currentDate],
+                ["name": "Jugador 5", "score": 60, "time": 65, "errors": 6, "date": currentDate]
+            ]
+            
+            // Guardamos temporalmente los registros falsos
+            recordsData = fakeRecords
+            UserDefaults.standard.set(recordsData, forKey: "records")
+        }
         
-        // Formatear la fecha en la que se registro el record para mostrarla en la vista.
+        // Formatear la fecha
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "dd/MM/yyyy HH:mm:ss"
         
@@ -75,6 +94,9 @@ class RecordsViewController: UIViewController, UITableViewDataSource {
                 score: score
             )
         }
+        
+        // Ordenar los registros por puntaje (de mayor a menor)
+        records.sort { $0.score > $1.score }
         
         tableViewRecords.reloadData()
     }
