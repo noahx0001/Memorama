@@ -31,7 +31,9 @@ class JuegoViewController: UIViewController {
     // Número de errores cometidos
     var errors = 0
     // Reproductor de audio para los efectos de sonido
-    var audioPlayer: AVAudioPlayer?
+    // Reproductores de audio
+    var backgroundMusicPlayer: AVAudioPlayer?
+    var soundEffectPlayers = [AVAudioPlayer]()
     
     // Estado inicial de las cartas (volteadas)
     var isFlipped = false
@@ -43,8 +45,18 @@ class JuegoViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        setupAudioSession()
         setupGame() // Configuración inicial del juego.
         startTimer() // Inicia el temporizador.
+        verifySoundFiles()
+        
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, options: .mixWithOthers)
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("Error configurando sesión de audio: \(error)")
+        }
+        
         
         for button in cardButtons {
             button.addTarget(self, action: #selector(cardTapped(_:)), for: .touchUpInside)
@@ -74,10 +86,27 @@ class JuegoViewController: UIViewController {
         }
     }
     
+    func setupAudioSession() {
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers, .duckOthers])
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("Error configurando sesión de audio: \(error.localizedDescription)")
+        }
+    }
+    
     @IBAction func regresar() {
-        audioPlayer?.stop() // Detiene la reproducción
-        audioPlayer = nil   // Libera los recursos del reproductor
-        dismiss(animated: true) // Regresar a la pantalla anterior.
+        stopAllSounds()
+        dismiss(animated: true)
+    }
+    
+    func verifySoundFiles() {
+        let requiredSounds = ["song-mario-bros", "coin", "win"]
+        for sound in requiredSounds {
+            if Bundle.main.path(forResource: sound, ofType: "mp3") == nil {
+                print("⚠️ Advertencia: Archivo \(sound).mp3 no encontrado")
+            }
+        }
     }
     
     // Temporizador
@@ -100,7 +129,7 @@ class JuegoViewController: UIViewController {
         }
         // Inicializa el contador del tiempo.
         timeLabel.text = "Tiempo: 0s"
-        playSound(named: "song-mario-bros", loop: true)
+        playBackgroundMusic(named: "song-mario-bros")
         scoreLabel.text = "Puntos: \(baseScore)"
     }
     
@@ -130,27 +159,25 @@ class JuegoViewController: UIViewController {
             button.setNeedsDisplay() // Fuerza la actualización visual del botón
         })
     }
-
-
+    
+    
     
     @IBAction func cardTapped(_ sender: UIButton) {
         guard let cardIndex = cardButtons.firstIndex(of: sender) else { return }
         
         guard !flippedCards.contains(sender),
-                      !matchedCards.contains(sender),
-                      flippedCards.count < 2 else { return }
+              !matchedCards.contains(sender),
+              flippedCards.count < 2 else { return }
         
         flipCardUp(button: sender,imageName:cardImages[cardIndex])
-                flippedCards.append(sender)
-                
-                if flippedCards.count == 2 {
-                    checkForMatch()
-                }
+        flippedCards.append(sender)
+        
+        if flippedCards.count == 2 {
+            checkForMatch()
+        }
     }
     
     func flipCardUp(button: UIButton, imageName: String) {
-        playSound(named: "flip")
-        
         UIView.transition(with: button, duration: 0.3, options: .transitionFlipFromLeft, animations: {
             button.backgroundColor = .placeholderText
             
@@ -180,6 +207,7 @@ class JuegoViewController: UIViewController {
         let index2 = cardButtons.firstIndex(of: card2)!
         
         if cardImages[index1] == cardImages[index2] {
+            playSoundEffect(named: "coin")
             // Emparejamiento correcto
             matchedCards.append(contentsOf: [card1, card2])
             flippedCards.removeAll()
@@ -201,24 +229,24 @@ class JuegoViewController: UIViewController {
     // Finalizar juego
     func endGame() {
         timer?.invalidate() // Detiene el temporizador
-        playSound(named: "win") // Sonido de victoria
+        playSoundEffect(named: "win")
         
         // Calcular el puntaje final
         finalScore = baseScore - (errors * penaltyforError) - (timeElapsed * penaltyforTime)
         finalScore = max(finalScore, 0)
-            
-            // Verificar si es un nuevo record
-            let records = UserDefaults.standard.array(forKey: "records") as? [[String: Any]] ?? []
-            let sortedRecords = records.sorted { ($0["score"] as? Int ?? 0) > ($1["score"] as? Int ?? 0) }
-            let isNewRecord = sortedRecords.count < 5 || finalScore > (sortedRecords.last?["score"] as? Int ?? 0)
-            
-            if isNewRecord {
-                // Pedir nombre solo si es nuevo record
-                askForNameAndSaveScore(finalScore)
-            } else {
-                // Mostrar alerta simple si no es record
-                showBasicAlert(title: "¡Ganaste!", message: "Puntaje: \(finalScore)\nTiempo: \(timeElapsed)s\nErrores: \(errors)")
-            }
+        
+        // Verificar si es un nuevo record
+        let records = UserDefaults.standard.array(forKey: "records") as? [[String: Any]] ?? []
+        let sortedRecords = records.sorted { ($0["score"] as? Int ?? 0) > ($1["score"] as? Int ?? 0) }
+        let isNewRecord = sortedRecords.count < 5 || finalScore > (sortedRecords.last?["score"] as? Int ?? 0)
+        
+        if isNewRecord {
+            // Pedir nombre solo si es nuevo record
+            askForNameAndSaveScore(finalScore)
+        } else {
+            // Mostrar alerta simple si no es record
+            showBasicAlert(title: "¡Ganaste!", message: "Puntaje: \(String(describing: finalScore))\nTiempo: \(timeElapsed)s\nErrores: \(errors)")
+        }
     }
     
     // Alerta básica (sin campo de texto)
@@ -245,7 +273,7 @@ class JuegoViewController: UIViewController {
         
         alert.addAction(cancelAction)
         alert.addAction(saveAction)
-       
+        
         present(alert, animated: true)
     }
     
@@ -274,19 +302,19 @@ class JuegoViewController: UIViewController {
     }
     func askForNameAndSaveScore(_ score: Int) {
         let alert = UIAlertController(
-                title: "¡Nuevo Record!",
-                message: "Ingresa tu nombre:",
-                preferredStyle: .alert
-            )
-            alert.addTextField { textField in
-                textField.placeholder = "Tu nombre"
+            title: "¡Nuevo Record!",
+            message: "Ingresa tu nombre:",
+            preferredStyle: .alert
+        )
+        alert.addTextField { textField in
+            textField.placeholder = "Tu nombre"
+        }
+        alert.addAction(UIAlertAction(title: "Guardar", style: .default) { _ in
+            if let name = alert.textFields?.first?.text?.trimmingCharacters(in: .whitespaces), !name.isEmpty {
+                self.saveScore(score, name: name)
             }
-            alert.addAction(UIAlertAction(title: "Guardar", style: .default) { _ in
-                if let name = alert.textFields?.first?.text?.trimmingCharacters(in: .whitespaces), !name.isEmpty {
-                    self.saveScore(score, name: name)
-                }
-            })
-            present(alert, animated: true)
+        })
+        present(alert, animated: true)
     }
     // Actualizar el tiempo.
     @objc func updateTimer() {
@@ -295,22 +323,66 @@ class JuegoViewController: UIViewController {
         updateScore()
     }
     // Sonidos
-    func playSound(named soundName: String, loop: Bool = false) {
-        guard let path = Bundle.main.path(forResource: soundName, ofType: "mp3") else { return }
-        let url = URL(fileURLWithPath: path)
+    // Reproducir música de fondo
+    func playBackgroundMusic(named soundName: String) {
+        // Detener música anterior si existe
+        backgroundMusicPlayer?.stop()
+        
+        guard let path = Bundle.main.path(forResource: soundName, ofType: "mp3") else {
+            print("Error: Archivo \(soundName).mp3 no encontrado")
+            return
+        }
         
         do {
-            audioPlayer = try AVAudioPlayer(contentsOf: url)
-            audioPlayer?.numberOfLoops = loop ? -1 : 0 // -1 para bucle, 0 para una sola vez.
-            audioPlayer?.play()
+            let player = try AVAudioPlayer(contentsOf: URL(fileURLWithPath: path))
+            player.numberOfLoops = -1 // Repetir indefinidamente
+            player.volume = 0.7 // Volumen moderado
+            player.prepareToPlay()
+            player.play()
+            backgroundMusicPlayer = player
         } catch {
-            print("Error al reproducir sonido")
+            print("Error al reproducir música de fondo: \(error.localizedDescription)")
         }
+    }
+    
+    func playSoundEffect(named soundName: String) {
+        guard let path = Bundle.main.path(forResource: soundName, ofType: "mp3") else {
+            print("Error: Archivo \(soundName).mp3 no encontrado")
+            return
+        }
+        
+        do {
+            // Limpiar reproductores de efectos completados
+            soundEffectPlayers = soundEffectPlayers.filter { $0.isPlaying }
+            
+            let player = try AVAudioPlayer(contentsOf: URL(fileURLWithPath: path))
+            player.volume = 1.0 // Volumen completo para efectos
+            player.delegate = self
+            player.prepareToPlay()
+            player.play()
+            soundEffectPlayers.append(player)
+        } catch {
+            print("Error al reproducir efecto de sonido: \(error.localizedDescription)")
+        }
+    }
+    
+    // Detener todos los sonidos
+    func stopAllSounds() {
+        backgroundMusicPlayer?.stop()
+        soundEffectPlayers.forEach { $0.stop() }
+        soundEffectPlayers.removeAll()
     }
     
     func updateScore(){
         let currentScore = baseScore - (errors * penaltyforError) - (timeElapsed * penaltyforTime)
         let displayedScore = max(currentScore, 0)
         self.scoreLabel.text = "Puntos: \(displayedScore)"
+    }
+}
+
+// Extensión para manejar la finalización de efectos de sonido
+extension JuegoViewController: AVAudioPlayerDelegate {
+    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        soundEffectPlayers.removeAll { $0 == player }
     }
 }
