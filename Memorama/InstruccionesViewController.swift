@@ -14,4 +14,7 @@ class InstruccionesViewController: UIViewController {
         
     }
 
+    @IBAction func backBtn(_ sender: Any) {
+        dismiss(animated: true)
+    }
 }

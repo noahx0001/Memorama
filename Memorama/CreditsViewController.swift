@@ -14,4 +14,7 @@ class CreditsViewController: UIViewController {
         
     }
 
+    @IBAction func backBtn(_ sender: Any) {
+        dismiss(animated: true) // Regresar a la pantalla anterior.
+    }
 }

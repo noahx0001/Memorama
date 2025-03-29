@@ -31,6 +31,9 @@
 			exceptions = (
 				0631F1F62D80943A00A7F3D4 /* Exceptions for "Memorama" folder in "Memorama" target */,
 			);
+			explicitFileTypes = {
+				recursosmemo/elcrico.png = image.png;
+			};
 			path = Memorama;
 			sourceTree = "<group>";
 		};

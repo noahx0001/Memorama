@@ -10,13 +10,16 @@ import AVFoundation
 
 class JuegoViewController: UIViewController {
     
+    @IBOutlet weak var titleLbl: UILabel!
+    @IBOutlet weak var counterLbl: UILabel!
     @IBOutlet weak var scoreLabel: UILabel!
+    @IBOutlet weak var pointsLbl: UILabel!
     // Referencia a la etiqueta para mostrar el tiempo transcurrido.
     @IBOutlet weak var timeLabel: UILabel!
     // Conexión de los botones de las cartas desde el Storyboard
     @IBOutlet var cardButtons: [UIButton]!
     // Array con los nombres de las imágenes de las cartas
-    var cardImages = ["card1", "card2", "card3", "card4", "card5", "card6", "card7", "card8", "card9", "card10", "card11", "card12"]
+    var cardImages = ["mario.png", "bowser.png", "toadd.png", "gumba.png", "luigi.png", "marihuanaamarilla.png", "noviatoadd.png", "peach.png", "travis.png", "wario.png", "yoshi.png", "yoshimaloamarilloquevuela.png"]
     // Array para almacenar las cartas que están volteadas temporalmente
     var flippedCards = [UIButton]()
     // Array para almacenar las cartas que ya han coincidido
@@ -38,11 +41,37 @@ class JuegoViewController: UIViewController {
     let penaltyforTime = 10
     var finalScore: Int!
     
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         setupGame() // Configuración inicial del juego.
         startTimer() // Inicia el temporizador.
+        
+        for button in cardButtons {
+            button.addTarget(self, action: #selector(cardTapped(_:)), for: .touchUpInside)
+            
+            UIView.transition(with: button, duration: 0.3, options: .transitionFlipFromRight, animations: {
+                button.setImage(nil, for: .normal) // Asegura que la imagen desaparezca
+                if let image = UIImage(named: "backgroundcard.jpeg") {
+                    // Tamaño deseado para las imágenes (puedes ajustar estos valores)
+                    let targetSize = CGSize(width: 70, height: 70)
+                    
+                    // Crear contexto de imagen para redimensionar
+                    let renderer = UIGraphicsImageRenderer(size: targetSize)
+                    let resizedImage = renderer.image { _ in
+                        image.draw(in: CGRect(origin: .zero, size: targetSize))
+                    }
+                    
+                    // Asignar imagen redimensionada
+                    button.setImage(resizedImage, for: .normal)
+                    button.imageView?.contentMode = .scaleAspectFit // Ajustar la imagen manteniendo la relación de aspecto
+                }
+                button.backgroundColor = .placeholderText
+            }, completion: { _ in
+                button.isUserInteractionEnabled = true
+                button.setNeedsDisplay() // Fuerza la actualización visual del botón
+            })
+            
+        }
     }
     
     @IBAction func regresar() {
@@ -75,14 +104,34 @@ class JuegoViewController: UIViewController {
         scoreLabel.text = "Puntos: \(baseScore)"
     }
     
-    // Voltear carta hacia abajo
+    // Voltear la card cuando no se encuentra el par
     func flipCardDown(button: UIButton) {
-        // Animación de volteado (dorso de la carta)
+        button.isUserInteractionEnabled = false
+        
         UIView.transition(with: button, duration: 0.3, options: .transitionFlipFromRight, animations: {
-            button.backgroundColor = .systemBlue
-            button.setTitle("", for: .normal)  // Oculta contenido
+            button.setImage(nil, for: .normal) // Asegura que la imagen desaparezca
+            if let image = UIImage(named: "backgroundcard.jpeg") {
+                // Tamaño deseado para las imágenes (puedes ajustar estos valores)
+                let targetSize = CGSize(width: 70, height: 70)
+                
+                // Crear contexto de imagen para redimensionar
+                let renderer = UIGraphicsImageRenderer(size: targetSize)
+                let resizedImage = renderer.image { _ in
+                    image.draw(in: CGRect(origin: .zero, size: targetSize))
+                }
+                
+                // Asignar imagen redimensionada
+                button.setImage(resizedImage, for: .normal)
+                button.imageView?.contentMode = .scaleAspectFit // Ajustar la imagen manteniendo la relación de aspecto
+            }
+            button.backgroundColor = .placeholderText
+        }, completion: { _ in
+            button.isUserInteractionEnabled = true
+            button.setNeedsDisplay() // Fuerza la actualización visual del botón
         })
     }
+
+
     
     @IBAction func cardTapped(_ sender: UIButton) {
         guard let cardIndex = cardButtons.firstIndex(of: sender) else { return }
@@ -99,14 +148,26 @@ class JuegoViewController: UIViewController {
                 }
     }
     
-    // Voltear carta hacia arriba (simulación)
     func flipCardUp(button: UIButton, imageName: String) {
-        playSound(named: "flip") // Efecto de sonido al voltear
-        // Animación de volteado (frente de la carta)
+        playSound(named: "flip")
+        
         UIView.transition(with: button, duration: 0.3, options: .transitionFlipFromLeft, animations: {
-            button.backgroundColor = .white
-            button.setTitle(imageName, for: .normal) // Simulamos contenido
-            button.setTitleColor(.black, for: .normal)
+            button.backgroundColor = .placeholderText
+            
+            if let originalImage = UIImage(named: imageName) {
+                // Tamaño deseado para las imágenes (puedes ajustar estos valores)
+                let targetSize = CGSize(width: 70, height: 70)
+                
+                // Crear contexto de imagen para redimensionar
+                let renderer = UIGraphicsImageRenderer(size: targetSize)
+                let resizedImage = renderer.image { _ in
+                    originalImage.draw(in: CGRect(origin: .zero, size: targetSize))
+                }
+                
+                // Asignar imagen redimensionada
+                button.setImage(resizedImage, for: .normal)
+                button.imageView?.contentMode = .scaleAspectFit // Ajustar la imagen manteniendo la relación de aspecto
+            }
         })
     }
     
