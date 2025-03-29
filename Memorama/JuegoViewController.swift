@@ -205,13 +205,31 @@ class JuegoViewController: UIViewController {
         
         // Calcular el puntaje final
         finalScore = baseScore - (errors * penaltyforError) - (timeElapsed * penaltyforTime)
-        // Validar que el puntaje no llegue a un valor negativo.
-        if finalScore < 0 {
-            finalScore = 0
-        }
-        
-        showAlert(title: "¡Juego Terminado!",
-                  message: "Tiempo: \(timeElapsed)s\nErrores: \(errors)\nPuntaje: \(String(finalScore))")
+        finalScore = max(finalScore, 0)
+            
+            // Verificar si es un nuevo record
+            let records = UserDefaults.standard.array(forKey: "records") as? [[String: Any]] ?? []
+            let sortedRecords = records.sorted { ($0["score"] as? Int ?? 0) > ($1["score"] as? Int ?? 0) }
+            let isNewRecord = sortedRecords.count < 5 || finalScore > (sortedRecords.last?["score"] as? Int ?? 0)
+            
+            if isNewRecord {
+                // Pedir nombre solo si es nuevo record
+                askForNameAndSaveScore(finalScore)
+            } else {
+                // Mostrar alerta simple si no es record
+                showBasicAlert(title: "¡Ganaste!", message: "Puntaje: \(finalScore)\nTiempo: \(timeElapsed)s\nErrores: \(errors)")
+            }
+    }
+    
+    // Alerta básica (sin campo de texto)
+    func showBasicAlert(title: String, message: String) {
+        let alert = UIAlertController(
+            title: title,
+            message: message,
+            preferredStyle: .alert
+        )
+        alert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(alert, animated: true)
     }
     
     // Alertas
@@ -255,16 +273,20 @@ class JuegoViewController: UIViewController {
         UserDefaults.standard.set(records, forKey: "records")
     }
     func askForNameAndSaveScore(_ score: Int) {
-        let alert = UIAlertController(title: "Nuevo Record", message: "Ingresa tu nombre:", preferredStyle: .alert)
-        alert.addTextField { textField in
-            textField.placeholder = "Tu nombre"
-        }
-        alert.addAction(UIAlertAction(title: "Guardar", style: .default) { _ in
-            if let name = alert.textFields?.first?.text, !name.isEmpty {
-                self.saveScore(score, name: name)
+        let alert = UIAlertController(
+                title: "¡Nuevo Record!",
+                message: "Ingresa tu nombre:",
+                preferredStyle: .alert
+            )
+            alert.addTextField { textField in
+                textField.placeholder = "Tu nombre"
             }
-        })
-        present(alert, animated: true)
+            alert.addAction(UIAlertAction(title: "Guardar", style: .default) { _ in
+                if let name = alert.textFields?.first?.text?.trimmingCharacters(in: .whitespaces), !name.isEmpty {
+                    self.saveScore(score, name: name)
+                }
+            })
+            present(alert, animated: true)
     }
     // Actualizar el tiempo.
     @objc func updateTimer() {
