@@ -51,52 +51,43 @@ class RecordsViewController: UIViewController, UITableViewDataSource {
     }
     
     func loadRecords() {
-        var recordsData = UserDefaults.standard.array(forKey: "records") as? [[String: Any]] ?? []
-            
-        // Si no hay registros reales, creamos 5 falsos
-        if recordsData.isEmpty {
-            let dateFormatter = DateFormatter()
-            dateFormatter.dateFormat = "dd/MM/yyyy HH:mm:ss"
+        // Cargar todos los registros guardados
+        let recordsData = UserDefaults.standard.array(forKey: "records") as? [[String: Any]] ?? []
+        
+        // Si no hay registros, crear 5 de ejemplo
+        var recordsToShow: [[String: Any]] = recordsData
+        
+        if recordsToShow.isEmpty {
             let currentDate = Date()
-            
-            // Creamos 5 registros de ejemplo
-            let fakeRecords: [[String: Any]] = [
+            recordsToShow = [
                 ["name": "Jugador 1", "score": 100, "time": 45, "errors": 2, "date": currentDate],
                 ["name": "Jugador 2", "score": 90, "time": 50, "errors": 3, "date": currentDate],
                 ["name": "Jugador 3", "score": 80, "time": 55, "errors": 4, "date": currentDate],
                 ["name": "Jugador 4", "score": 70, "time": 60, "errors": 5, "date": currentDate],
                 ["name": "Jugador 5", "score": 60, "time": 65, "errors": 6, "date": currentDate]
             ]
-            
-            // Guardamos temporalmente los registros falsos
-            recordsData = fakeRecords
-            UserDefaults.standard.set(recordsData, forKey: "records")
         }
         
-        // Formatear la fecha
+        // Ordenar por score (de mayor a menor) y tomar solo los primeros 5
+        let sortedRecords = recordsToShow.sorted {
+            ($0["score"] as? Int ?? 0) > ($1["score"] as? Int ?? 0)
+        }
+        let top5Records = Array(sortedRecords.prefix(5))
+        
+        // Formatear y asignar a la variable records
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "dd/MM/yyyy HH:mm:ss"
         
-        // Convertir los datos a estructuras Record
-        records = recordsData.enumerated().map { index, record in
-            let name = record["name"] as? String ?? "Anónimo"
-            let score = record["score"] as? Int ?? 0
-            let time = record["time"] as? Int ?? 0
-            let errors = record["errors"] as? Int ?? 0
-            let date = record["date"] as? Date ?? Date()
-            
-            return Record(
+        records = top5Records.enumerated().map { index, record in
+            Record(
                 num: index + 1,
-                name: name,
-                time: time,
-                errors: errors,
-                date: dateFormatter.string(from: date),
-                score: score
+                name: record["name"] as? String ?? "Anónimo",
+                time: record["time"] as? Int ?? 0,
+                errors: record["errors"] as? Int ?? 0,
+                date: dateFormatter.string(from: record["date"] as? Date ?? Date()),
+                score: record["score"] as? Int ?? 0
             )
         }
-        
-        // Ordenar los registros por puntaje (de mayor a menor)
-        records.sort { $0.score > $1.score }
         
         tableViewRecords.reloadData()
     }
